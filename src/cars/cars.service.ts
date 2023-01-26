@@ -1,23 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Car } from './interfaces/car.interface';
+import { v4 as uuid } from 'uuid';
+import { CreateCarDTO } from './dto/create-car.dto';
+import { UpdateCarDTO } from './dto/update-car.dto ';
 
 // Un servicio es una clase que se encarga de realizar operaciones especificas
 // y que puede ser inyectada en otros componentes
 // Se encarga de la logica de negocio
 @Injectable()
 export class CarsService {
-  private cars = [
+  private cars: Car[] = [
     {
-      id: 1,
+      // Un UUID es un identificador unico universal, es un identificador que se usa para
+      // generar un identificador unico para cada recurso
+      id: uuid(),
       brand: 'Ford',
       model: 'Fiesta',
     },
     {
-      id: 2,
+      id: uuid(),
       brand: 'Chevrolet',
       model: 'Camaro',
     },
     {
-      id: 3,
+      id: uuid(),
       brand: 'Toyota',
       model: 'Corolla',
     },
@@ -27,7 +37,7 @@ export class CarsService {
     return this.cars;
   }
 
-  public findById(id: number) {
+  public findById(id: string) {
     const car = this.cars.find((car) => car.id === id);
     if (!car) {
       throw new NotFoundException(`El carro con el id '${id}' no existe`);
@@ -37,38 +47,48 @@ export class CarsService {
     return car;
   }
 
-  public create(body: any) {
-    // Se crea un nuevo id en base al id del ultimo carro mas 1
-    const id = this.cars[this.cars.length - 1].id + 1;
-    // Se crea un nuevo carro con el id creado y el resto de la informacion contenida en el body
-    const car = {
-      id,
-      ...body,
-    };
-    // Se agrega el nuevo carro al arreglo de carros
-    this.cars.push(car);
-    return car;
+  public update(id: string, updateCarDto: UpdateCarDTO) {
+    // Se usa el metodo findById para obtener el carro con el id especificado
+    let carDB = this.findById(id);
+    if (updateCarDto.id && updateCarDto.id !== id) {
+      // Se verifica que el id del body sea igual al id del carro
+      throw new BadRequestException(
+        `El id del carro no coincide con el id del body`,
+      );
+    }
+    // Se actualiza la informacion del carro con la nueva informacion contenida en el body
+    this.cars = this.cars.map((car) => {
+      // Se usa el metodo map para iterar sobre el arreglo de carros
+      if (car.id === id) {
+        carDB = {
+          ...carDB,
+          ...updateCarDto,
+          id,
+        };
+        return carDB;
+      }
+      return car;
+    });
+    return carDB;
   }
 
-  public update(id: number, body: any) {
+  public delete(id: string) {
     // Se usa el metodo findById para obtener el carro con el id especificado
     const car = this.findById(id);
-    // Se actualiza la informacion del carro con la nueva informacion contenida en el body
-    car.brand = body.brand;
-    car.model = body.model;
     if (!car) {
       throw new NotFoundException(`El carro con el id '${id}' no existe`);
     }
-    return car;
+    this.cars = this.cars.filter((car) => car.id !== id);
   }
 
-  public delete(id: number) {
-    // Se usa el metodo findById para obtener el carro con el id especificado
-    const car = this.findById(id);
-    // Se seleccina el indice del carro en el arreglo de carros
-    const index = this.cars.indexOf(car);
-    // Se elimina el carro del arreglo de carros
-    this.cars.splice(index, 1);
-    return car;
+  public create(createCarDto: CreateCarDTO) {
+    // Se crea un nuevo carro con la informacion contenida en el DTO
+    const newCar = {
+      id: uuid(),
+      ...createCarDto,
+    };
+    // Se agrega el nuevo carro al arreglo de carros
+    this.cars.push(newCar);
+    return newCar;
   }
 }
